@@ -5,5 +5,7 @@ Each individual node can be named(except in grids) and blocked/unblocked.
 
 Also, due to being requred from me as a school project, it also features an interactive mode, called with `interactive_mode()`, where one can with simple commands create graphs and digraphs. Currently, unless in the unlikely event that someone actually wanted it, i dont have any plans to expand the interactive mode.
 
+In the included main file is a demonstration of the library.
+
 ### Future improvements:
 * Add more search algorithms
