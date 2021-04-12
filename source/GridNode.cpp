@@ -3,16 +3,6 @@
 
 GridNode::GridNode() {
 	visited = false;
-	id = 0;
-	previous = 0;
-	blocked = false;
-	beginNode = false;
-	endNode = false;
-	sign = '.';
-}
-GridNode::GridNode(const int _id) {
-	visited = false;
-	id = _id;
 	previous = 0;
 	blocked = false;
 	beginNode = false;
@@ -49,12 +39,6 @@ void GridNode::setSign(const char recvSign) {
 char GridNode::getSign() const {
 	return sign;
 }
-void GridNode::setId(const int recvId) {
-	id = recvId;
-}
-int GridNode::getId() const {
-	return id;
-}
 void GridNode::setPrevious(const int recvID) {
 	previous = recvID + 1;
 }
@@ -65,22 +49,22 @@ void GridNode::setVisited() {
 	visited = true;
 }
 bool GridNode::isBeginNode() const {
-	return beginNode == true ? true : false;
+	return beginNode;
 }
 bool GridNode::isEndNode() const {
-	return endNode == true ? true : false;
+	return endNode;
 }
 bool GridNode::isFree() const {
 	return blocked == true ? false : true;
 }
 bool GridNode::isVisited() const {
-	return visited == true ? true : false;
+	return visited;
 }
 void GridNode::clear() {
 	visited = false;
 	previous = 0;
 }
-void GridNode::findNeighbours(const int ver, const int hor) {
+void GridNode::findNeighbours(const int id, const int ver, const int hor) {
 	//Left
 	if ((id - 1) != 0 && (id - 1) % ver != 0) {
 		outEdge.push_back(id - 1);
@@ -103,8 +87,6 @@ void GridNode::showNeighbours() {
 		std::cout << *it << " ";
 	}
 }
-
-
 std::size_t GridNode::countNeighbours() const {
 	return outEdge.size();
 }

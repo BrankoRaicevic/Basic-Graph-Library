@@ -11,11 +11,11 @@ class Node {
 	bool visited;
 	std::string name;
 	std::vector<int> outEdge;
+	std::vector<int> outWeight;
 	friend class Graph;
 	friend class DiGraph;
 public:
-	Node();
-	Node(int);
+	Node(int = 0);
 	void setPrevious(const int);
 	int getPrevious() const;
 	void setVisited();
@@ -27,8 +27,9 @@ public:
 	void showNeighbours();
 	std::size_t countNeighbours() const;
 	int returnNeighbour(const std::size_t) const;
-	int addEdge(int);
+	int returnNeighbourWeight(const std::size_t) const;
+	bool addEdge(int, int = 1);
 	void updateNeighbours(const int);
 	void nodeRemovalUpdate(const int);
-	int removeEdge(const int);
+	bool removeEdge(const int);
 };

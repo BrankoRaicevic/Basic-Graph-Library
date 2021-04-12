@@ -7,21 +7,18 @@ class Grid {
 	int column;
 	int startNodeID;
 	int endNodeID;
-	int totalNodes;
-	bool searched;
 public:
 	Grid(const int, const int);
 	Grid(const Grid&);
-	int setStartNode(int, int);
-	int setEndNode(int, int);
-	int blockNode(int, int);
-	int removeStartNode(int, int);
-	int removeEndNode(int, int);
-	int removeBlock(int, int);
-	int BreadthFirstSearch();
-	int DepthFirstSearch();
+	void setStartNode(int, int);
+	void setEndNode(int, int);
+	void blockNode(int, int);
+	void removeStartNode();
+	void removeEndNode(int, int);
+	void removeBlock(int, int);
+	void BreadthFirstSearch();
+	void DepthFirstSearch();
 	void searchCleanup();
-
 	void drawGraph();
 	void printGraph();
 };

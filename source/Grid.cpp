@@ -8,106 +8,94 @@ Grid::Grid(const int _row, const int _column) {
 	if (_row < 1 || _column < 1) {
 		throw std::invalid_argument("Parametars must be positive numbers");
 	}
-	searched = false;
 	startNodeID = -1;
 	endNodeID = -1;
 	row = _row;
 	column = _column;
-	totalNodes = _row * _column - 1;
-	for (int i = 0; i <= totalNodes; i++) {
-		nodeArr.push_back(GridNode(i + 1));
+	for (int i = 0; i < (_row * _column); i++) {
+		nodeArr.push_back(GridNode());
 	}
-	for (int i = 0; i <= totalNodes; i++) {
-		nodeArr[i].findNeighbours(column, row);
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		nodeArr[i].findNeighbours(i + 1, column, row);
 	}
 }
 Grid::Grid(const Grid& g) {
-	searched = g.searched;
 	startNodeID = g.startNodeID;
 	endNodeID = g.endNodeID;
 	row = g.row;
 	column = g.column;
-	totalNodes = g.totalNodes;
 	nodeArr = g.nodeArr;
 }
-int Grid::setStartNode(int _row, int _column) {
+void Grid::setStartNode(int _row, int _column) {
 	if (_row <= row && _column <= column && _row > 0 && _column > 0) {
 		_row--;
 		_column--;
+		if (startNodeID >= 0) {
+			nodeArr[startNodeID].removeBeginNode();
+		}
 		startNodeID = _row * column + _column;
 		nodeArr[startNodeID].setBeginNode();
-		return 0;
+		return;
 	}
-	return 1;
+	throw std::out_of_range("Index out of scope");
 }
-int Grid::setEndNode(int _row, int _column) {
+void Grid::setEndNode(int _row, int _column) {
 	if (_row <= row && _column <= column && _row > 0 && _column > 0) {
 		_row--;
 		_column--;
-		endNodeID = _row * column + _column;
-		nodeArr[endNodeID].setEndNode();
-		return 0;
+		nodeArr[_row * column + _column].setEndNode();
+		return;
 	}
-	return 1;
+	throw std::out_of_range("Index out of scope");
 }
 
-int Grid::blockNode(int _row, int _column) {
+void Grid::blockNode(int _row, int _column) {
 	if (_row <= row && _column <= column && _row > 0 && _column > 0) {
 		_row--;
 		_column--;
 		nodeArr[_row * column + _column].setBlocked();
-		return 0;
+		return;
 	}
-	return 1;
+	throw std::out_of_range("Index out of scope");
 }
 
-int Grid::removeStartNode(int _row, int _column) {
-	if (_row <= row && _column <= column && _row > 0 && _column > 0) {
-		_row--;
-		_column--;
-		nodeArr[_row * column + _column].removeBeginNode();
+void Grid::removeStartNode() {
+	if (startNodeID >= 0) {
+		nodeArr[startNodeID].removeBeginNode();
 		startNodeID = -1;
-		return 0;
 	}
-	return 1;
 }
 
-int Grid::removeEndNode(int _row, int _column) {
+void Grid::removeEndNode(int _row, int _column) {
 	if (_row <= row && _column <= column && _row > 0 && _column > 0) {
 		_row--;
 		_column--;
 		nodeArr[_row * column + _column].removeEndNode();
-		endNodeID = -1;
-		return 0;
+		return;
 	}
-	return 1;
+	throw std::out_of_range("Index out of scope");
 }
 
-int Grid::removeBlock(int _row, int _column) {
+void Grid::removeBlock(int _row, int _column) {
 	if (_row <= row && _column <= column && _row > 0 && _column > 0) {
 		_row--;
 		_column--;
 		nodeArr[_row * column + _column].removeBlocked();
-		return 0;
+		return;
 	}
-	return 1;
+	throw std::out_of_range("Index out of scope");
 }
 
-int Grid::BreadthFirstSearch() {
+void Grid::BreadthFirstSearch() {
 	std::queue<int> frontier;
 	int activeNode;
 	bool end = false;
-	if (searched == true) {
-		searchCleanup();
-		searched = false;
+	if (startNodeID == -1) {
+		throw std::logic_error("start node not set");
 	}
+	searchCleanup();
 	frontier.push(startNodeID);
-	while (1) {
-		if (frontier.empty()) {
-			std::cout << "Impossible to reach end node" << std::endl;
-			searched = true;
-			return 1;
-		}
+	while (!frontier.empty()) {
 		activeNode = frontier.front();
 		frontier.pop();
 		for (std::size_t i = 0; i < nodeArr[activeNode].countNeighbours(); i++) {
@@ -127,25 +115,18 @@ int Grid::BreadthFirstSearch() {
 			break;
 		}
 	}
-	searched = true;
-	return 0;
 }
 
-int Grid::DepthFirstSearch() {
+void Grid::DepthFirstSearch() {
 	std::stack<int> frontier;
 	int activeNode;
 	bool end = false;
-	if (searched == true) {
-		searchCleanup();
-		searched = false;
+	if (startNodeID == -1) {
+		throw std::logic_error("start node not set");
 	}
+	searchCleanup();
 	frontier.push(startNodeID);
-	while (1) {
-		if (frontier.empty()) {
-			std::cout << "Impossible to reach end node" << std::endl;
-			searched = true;
-			return 1;
-		}
+	while (!frontier.empty()) {
 		activeNode = frontier.top();
 		frontier.pop();
 		for (std::size_t i = 0; i < nodeArr[activeNode].countNeighbours(); i++) {
@@ -165,12 +146,10 @@ int Grid::DepthFirstSearch() {
 			break;
 		}
 	}
-	searched = true;
-	return 0;
 }
 
 void Grid::searchCleanup() {
-	for (int i = 0; i <= totalNodes; i++) {
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
 		nodeArr[i].clear();
 	}
 }
@@ -178,8 +157,11 @@ void Grid::searchCleanup() {
 void Grid::drawGraph() {
 	std::vector<int> path;
 	int currentNode = endNodeID;
+	if ((startNodeID == -1) || (endNodeID == -1)) {
+		throw std::logic_error("start or end node not set");
+	}
 	if (!nodeArr[endNodeID].isVisited()) {
-		return;
+		throw std::logic_error("end node not visited/unreachable");
 	}
 	while (1) {
 		if (nodeArr[currentNode].isBeginNode()) {
@@ -199,9 +181,10 @@ void Grid::drawGraph() {
 		}
 	}
 }
+
 void Grid::printGraph() {
 	int count = column;
-	for (int i = 0; i <= totalNodes; i++) {
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
 		std::cout << nodeArr[i].getSign();
 		count--;
 		if (count == 0) {
