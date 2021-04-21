@@ -94,15 +94,19 @@ void Grid::BreadthFirstSearch() {
 		throw std::logic_error("start node not set");
 	}
 	searchCleanup();
+	bool* visited = new bool[nodeArr.size() + 1];
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		visited[i] = false;
+	}
 	frontier.push(startNodeID);
 	while (!frontier.empty()) {
 		activeNode = frontier.front();
 		frontier.pop();
 		for (std::size_t i = 0; i < nodeArr[activeNode].countNeighbours(); i++) {
 			int retID = nodeArr[activeNode].returnNeighbour(i) - 1;
-			if (nodeArr[retID].isFree() && !nodeArr[retID].isVisited()) {
+			if (nodeArr[retID].isFree() && visited[retID] == false) {
 				nodeArr[retID].setPrevious(activeNode);
-				nodeArr[retID].setVisited();
+				visited[retID] = true;
 				if (nodeArr[retID].isEndNode()) {
 					endNodeID = retID;
 					end = true;
@@ -115,6 +119,7 @@ void Grid::BreadthFirstSearch() {
 			break;
 		}
 	}
+	delete[] visited;
 }
 
 void Grid::DepthFirstSearch() {
@@ -125,15 +130,19 @@ void Grid::DepthFirstSearch() {
 		throw std::logic_error("start node not set");
 	}
 	searchCleanup();
+	bool* visited = new bool[nodeArr.size() + 1];
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		visited[i] = false;
+	}
 	frontier.push(startNodeID);
 	while (!frontier.empty()) {
 		activeNode = frontier.top();
 		frontier.pop();
 		for (std::size_t i = 0; i < nodeArr[activeNode].countNeighbours(); i++) {
 			int retID = nodeArr[activeNode].returnNeighbour(i) - 1;
-			if (nodeArr[retID].isFree() && !nodeArr[retID].isVisited()) {
+			if (nodeArr[retID].isFree() && visited[retID] == false) {
 				nodeArr[retID].setPrevious(activeNode);
-				nodeArr[retID].setVisited();
+				visited[retID] = true;
 				if (nodeArr[retID].isEndNode()) {
 					endNodeID = retID;
 					end = true;
@@ -146,6 +155,7 @@ void Grid::DepthFirstSearch() {
 			break;
 		}
 	}
+	delete[] visited;
 }
 
 void Grid::searchCleanup() {
@@ -160,7 +170,7 @@ void Grid::drawGraph() {
 	if ((startNodeID == -1) || (endNodeID == -1)) {
 		throw std::logic_error("start or end node not set");
 	}
-	if (!nodeArr[endNodeID].isVisited()) {
+	if (nodeArr[endNodeID].getPrevious() == -1) {
 		throw std::logic_error("end node not visited/unreachable");
 	}
 	while (1) {

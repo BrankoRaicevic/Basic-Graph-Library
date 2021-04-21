@@ -39,43 +39,17 @@ Graph::Graph(const int nodeCount) {
 	if (nodeCount < 0) {
 		throw std::invalid_argument("Node count cannot be negative");
 	}
-	startNodeID = -1;
-	endNodeID = -1;
 	graphCount++;
 	for (int i = 0; i < nodeCount; i++) {
-		nodeArr.push_back(Node(i));
+		nodeArr.push_back(Node());
 	}
 }
 Graph::Graph(const Graph& g) {
-	startNodeID = g.startNodeID;
-	endNodeID = g.endNodeID;
 	nodeArr = g.nodeArr;
 	aliasResolve = g.aliasResolve;
 }
 Graph::~Graph() {
 	graphCount--;
-}
-void Graph::setStartNode(const int _startNode) {
-	if ((_startNode >= 0) && (_startNode < nodeArr.size())) {
-		if (startNodeID >= 0) {
-			nodeArr[startNodeID].beginNode = false;
-		}
-		startNodeID = _startNode;
-		nodeArr[startNodeID].beginNode = true;
-		return;
-	}
-	throw std::out_of_range("Index out of scope");
-}
-void Graph::setEndNode(const int _endNode) {
-	if ((_endNode >= 0) && (_endNode < nodeArr.size())) {
-		if (endNodeID >= 0) {
-			nodeArr[endNodeID].endNode = false;
-		}
-		endNodeID = _endNode;
-		nodeArr[endNodeID].endNode = true;
-		return;
-	}
-	throw std::out_of_range("Index out of scope");
 }
 
 void Graph::blockNode(const int _blockNode) {
@@ -84,20 +58,6 @@ void Graph::blockNode(const int _blockNode) {
 		return;
 	}
 	throw std::out_of_range("Index out of scope");
-}
-
-void Graph::removeStartNode() {
-	if (startNodeID >= 0) {
-		nodeArr[startNodeID].beginNode = false;
-		startNodeID = -1;
-	}
-}
-
-void Graph::removeEndNode() {
-	if (endNodeID >= 0) {
-		nodeArr[endNodeID].endNode = false;
-		endNodeID = -1;
-	}
 }
 
 void Graph::removeBlock(const int _blockNode) {
@@ -120,31 +80,6 @@ bool Graph::removeEdge(const int id1, const int id2) {
 		return nodeArr[id1].removeEdge(id2) && nodeArr[id2].removeEdge(id1);
 	}
 	throw std::out_of_range("Index out of scope");
-}
-
-void Graph::setStartNode(const std::string& _startNode) {
-	std::map<std::string, int>::iterator it = aliasResolve.find(_startNode);
-	if (it != aliasResolve.end()) {
-		if (startNodeID >= 0) {
-			nodeArr[startNodeID].beginNode = false;
-		}
-		startNodeID = it->second;
-		nodeArr[it->second].beginNode = true;
-		return;
-	}
-	throw std::invalid_argument("Couldn't find name");
-}
-void Graph::setEndNode(const std::string& _endNode) {
-	std::map<std::string, int>::iterator it = aliasResolve.find(_endNode);
-	if (it != aliasResolve.end()) {
-		if (endNodeID >= 0) {
-			nodeArr[endNodeID].endNode = false;
-		}
-		endNodeID = it->second;
-		nodeArr[it->second].endNode = true;
-		return;
-	}
-	throw std::invalid_argument("Couldn't find name");
 }
 
 void Graph::blockNode(const std::string& _blockNode) {
@@ -185,14 +120,13 @@ bool Graph::removeEdge(const std::string& _alias1, const std::string& _alias2) {
 
 void Graph::addNode() {
 	nodeArr.push_back(Node());
-	nodeArr[nodeArr.size() - 1].id = nodeArr.size() - 1;
 }
 
 bool Graph::addNode(const std::string& _name) {
 	std::map<std::string, int>::iterator it = aliasResolve.find(_name);
 	if ((it == aliasResolve.end())) {
 		addNode();
-		return setName(nodeArr[nodeArr.size() - 1].id, _name);
+		return setName(nodeArr.size() - 1, _name); //(nodeArr.size() - 1) is the 'id'
 	}
 	return false;
 }
@@ -200,13 +134,6 @@ bool Graph::addNode(const std::string& _name) {
 void Graph::removeNode(const int id) {
 	if ((id >= 0) && (id < nodeArr.size())) {
 		nodeArr.erase(nodeArr.begin() + id);
-		if (id < endNodeID) { endNodeID--; }
-		else if (id == endNodeID) { endNodeID = -1; }
-		if (id < startNodeID) { startNodeID--; }
-		else if (id == startNodeID) { startNodeID = -1; }
-		for (std::size_t i = id; i < nodeArr.size(); i++) {
-			nodeArr[i].id--;
-		}
 		for (std::size_t i = 0; i < nodeArr.size(); i++) {
 			nodeArr[i].nodeRemovalUpdate(id);
 		}
@@ -263,15 +190,9 @@ void Graph::save(const std::string& graphName) {
 	char byte = static_cast<char> (graphType());
 	auto arrSize = nodeArr.size();
 	fp.write((char*)&byte, sizeof(byte));
-	fp.write((char*)&startNodeID, sizeof(startNodeID));
-	fp.write((char*)&endNodeID, sizeof(endNodeID));
 	fp.write((char*)&arrSize, sizeof(arrSize));
 	for (std::size_t i = 0; i < nodeArr.size(); i++) {
-		fp.write((char*)&nodeArr[i].id, sizeof(nodeArr[i].id));
-		fp.write((char*)&nodeArr[i].visited, sizeof(nodeArr[i].visited));
 		fp.write((char*)&nodeArr[i].blocked, sizeof(nodeArr[i].blocked));
-		fp.write((char*)&nodeArr[i].endNode, sizeof(nodeArr[i].endNode));
-		fp.write((char*)&nodeArr[i].beginNode, sizeof(nodeArr[i].beginNode));
 		auto nameSize = nodeArr[i].name.size();
 		fp.write((char*)&nameSize, sizeof(nameSize));
 		for (std::size_t j = 0; j < nodeArr[i].name.size(); j++) {
@@ -302,16 +223,10 @@ void Graph::load(const std::string& graphName) {
 	if (byte != graphType()) {
 		throw std::ios_base::failure("Trying to load incompatible graph");
 	}
-	fp.read((char*)&startNodeID, sizeof(startNodeID));
-	fp.read((char*)&endNodeID, sizeof(endNodeID));
 	fp.read((char*)&arrSize, sizeof(arrSize));
 	nodeArr.resize(arrSize);
 	for (std::size_t i = 0; i < arrSize; i++) {
-		fp.read((char*)&nodeArr[i].id, sizeof(nodeArr[i].id));
-		fp.read((char*)&nodeArr[i].visited, sizeof(nodeArr[i].visited));
 		fp.read((char*)&nodeArr[i].blocked, sizeof(nodeArr[i].blocked));
-		fp.read((char*)&nodeArr[i].endNode, sizeof(nodeArr[i].endNode));
-		fp.read((char*)&nodeArr[i].beginNode, sizeof(nodeArr[i].beginNode));
 		auto nameSize = nodeArr[i].name.size();
 		fp.read((char*)&nameSize, sizeof(nameSize));
 		nodeArr[i].name.resize(nameSize);
@@ -334,7 +249,7 @@ void Graph::load(const std::string& graphName) {
 	fp.close();
 	for (std::size_t i = 0; i < nodeArr.size(); i++) {
 		if (nodeArr[i].name != "") {
-			aliasResolve.emplace(nodeArr[i].name, nodeArr[i].id);
+			aliasResolve.emplace(nodeArr[i].name, i); //(i) second argument is 'id'
 		}
 	}
 }
@@ -351,24 +266,46 @@ bool Graph::isConnected() {
 	return true;
 }
 
-void Graph::BreadthFirstSearch() {
+std::vector<std::vector<int>> Graph::weightMatrix(){
+	std::vector<std::vector<int>> distMatrix(nodeArr.size(), std::vector<int>(nodeArr.size()));
+
+	for (std::size_t i = 0; i < distMatrix.size(); ++i) {
+		for (std::size_t j = 0; j < distMatrix.size(); ++j) {
+			auto it = std::find(nodeArr[i].outEdge.begin(), nodeArr[i].outEdge.end(), j); //(j) is 'id'
+			if (it != nodeArr[i].outEdge.end()) {
+				auto dist = std::distance(nodeArr[i].outEdge.begin(), it);
+				distMatrix[i][j] = nodeArr[i].outWeight[dist];
+			}
+			else {
+				distMatrix[i][j] = 0;
+			}
+		}
+	}
+	return distMatrix;
+}
+
+std::vector<int> Graph::BreadthFirstSearch(const int startNodeID, int endNodeID) {
+	if (!((startNodeID >= 0) && (startNodeID < nodeArr.size()) && (endNodeID >= 0) && (endNodeID < nodeArr.size()) && (endNodeID != startNodeID))) {
+		throw std::out_of_range("Index out of scope");
+	}
 	std::queue<int> frontier;
 	int activeNode;
 	bool end = false;
-	if (startNodeID == -1) {
-		throw std::logic_error("start node not set");
+	std::vector<int> whoVisited(nodeArr.size(), -1);
+	bool* visited = new bool[nodeArr.size() + 1];
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		visited[i] = false;
 	}
-	searchCleanup();
 	frontier.push(startNodeID);
 	while (!frontier.empty()) {
 		activeNode = frontier.front();
 		frontier.pop();
 		for (std::size_t i = 0; i < nodeArr[activeNode].countNeighbours(); i++) {
 			int retID = nodeArr[activeNode].returnNeighbour(i);
-			if (nodeArr[retID].isFree() && !nodeArr[retID].isVisited()) {
-				nodeArr[retID].setPrevious(activeNode);
-				nodeArr[retID].setVisited();
-				if (nodeArr[retID].isEndNode()) {
+			if (nodeArr[retID].isFree() && visited[retID] == false) {
+				whoVisited[retID] = activeNode;
+				visited[retID] = true;
+				if (retID == endNodeID) {
 					endNodeID = retID;
 					end = true;
 					break;
@@ -380,26 +317,32 @@ void Graph::BreadthFirstSearch() {
 			break;
 		}
 	}
+	delete[] visited;
+	return drawPath(whoVisited, startNodeID, endNodeID);
 }
 
-void Graph::DepthFirstSearch() {
+std::vector<int> Graph::DepthFirstSearch(const int startNodeID, int endNodeID) {
+	if (!((startNodeID >= 0) && (startNodeID < nodeArr.size()) && (endNodeID >= 0) && (endNodeID < nodeArr.size()) && (endNodeID != startNodeID))) {
+		throw std::out_of_range("Index out of scope");
+	}
 	std::stack<int> frontier;
 	int activeNode;
 	bool end = false;
-	if (startNodeID == -1) {
-		throw std::logic_error("start node not set");
+	std::vector<int> whoVisited(nodeArr.size(), -1);
+	bool* visited = new bool[nodeArr.size() + 1];
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		visited[i] = false;
 	}
-	searchCleanup();
 	frontier.push(startNodeID);
 	while (!frontier.empty()) {
 		activeNode = frontier.top();
 		frontier.pop();
 		for (std::size_t i = 0; i < nodeArr[activeNode].countNeighbours(); i++) {
 			int retID = nodeArr[activeNode].returnNeighbour(i);
-			if (nodeArr[retID].isFree() && !nodeArr[retID].isVisited()) {
-				nodeArr[retID].setPrevious(activeNode);
-				nodeArr[retID].setVisited();
-				if (nodeArr[retID].isEndNode()) {
+			if (nodeArr[retID].isFree() && visited[retID] == false) {
+				whoVisited[retID] = activeNode;
+				visited[retID] = true;
+				if (retID == endNodeID) {
 					endNodeID = retID;
 					end = true;
 					break;
@@ -411,18 +354,20 @@ void Graph::DepthFirstSearch() {
 			break;
 		}
 	}
+	delete[] visited;
+	return drawPath(whoVisited, startNodeID, endNodeID);
 }
 
-void Graph::Dijkstra() {
+std::vector<int> Graph::Dijkstra(const int startNodeID, int endNodeID) {
+	if (!((startNodeID >= 0) && (startNodeID < nodeArr.size()) && (endNodeID >= 0) && (endNodeID < nodeArr.size()) && (endNodeID != startNodeID))) {
+		throw std::out_of_range("Index out of scope");
+	}
 	PriorityQueue<int, int> frontier;
 	int activeNode;
 	bool end = false;
 	constexpr int maxWeight = std::numeric_limits<int>::max();
 	std::vector<int> minDistance;
-	if (startNodeID == -1) {
-		throw std::logic_error("start node not set");
-	}
-	searchCleanup();
+	std::vector<int> whoVisited(nodeArr.size(), -1);
 	minDistance.clear();
 	minDistance.resize(nodeArr.size(), maxWeight);
 	minDistance[startNodeID] = 0;
@@ -438,10 +383,9 @@ void Graph::Dijkstra() {
 			int retWeigh = nodeArr[activeNode].returnNeighbourWeight(i);
 			int distThruVertex = dist + retWeigh;
 			if (nodeArr[retID].isFree() && (distThruVertex < minDistance[retID])) {
-				nodeArr[retID].setPrevious(activeNode);
-				nodeArr[retID].setVisited();
+				whoVisited[retID] = activeNode;
 				minDistance[retID] = distThruVertex;
-				if (nodeArr[activeNode].isEndNode()) {
+				if (activeNode == endNodeID) {
 					endNodeID = retID;
 					end = true;
 					break;
@@ -453,15 +397,19 @@ void Graph::Dijkstra() {
 			break;
 		}
 	}
+	return drawPath(whoVisited, startNodeID, endNodeID);
 }
 
-bool Graph::Bipartite() {
+bool Graph::Bipartite(const int startNodeID) {
+	if (!((startNodeID >= 0) && (startNodeID < nodeArr.size()))) {
+		throw std::out_of_range("Index out of scope");
+	}
 	std::queue<int> frontier;
 	int activeNode;
-	if (startNodeID == -1) {
-		throw std::logic_error("start node not set");
+	bool* visited = new bool[nodeArr.size() + 1];
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		visited[i] = false;
 	}
-	searchCleanup();
 	char* color = new char[nodeArr.size() + 1];
 	for (std::size_t i = 0; i < nodeArr.size(); i++) {
 		color[i] = 0;
@@ -470,6 +418,7 @@ bool Graph::Bipartite() {
 	frontier.push(startNodeID);
 	while (1) {
 		if (frontier.empty()) {
+			delete[] visited;
 			delete[] color;
 			return true;
 		}
@@ -481,92 +430,18 @@ bool Graph::Bipartite() {
 				if (color[retID] == 0) {
 					color[retID] = color[activeNode] == 1 ? 2 : 1;
 				}
-				if (!nodeArr[retID].isVisited()) {
-					nodeArr[retID].setVisited();
+				if (visited[retID] == false) {
+					visited[retID] = true;
 					frontier.push(retID);
 				}
 			}
 			else {
+				delete[] visited;
 				delete[] color;
 				return false;
 			}
 		}
 	}
-}
-
-std::vector<int> Graph::BreadthFirstSearch(int startNode, int endNode) {
-	if ((startNode >= 0) && (startNode < nodeArr.size()) && (endNode >= 0) && (endNode < nodeArr.size()) && (endNode != startNode)) {
-		int tmpSN = startNodeID;
-		int tmpEN = endNodeID;
-		setStartNode(startNode);
-		setEndNode(endNode);
-		BreadthFirstSearch();
-		auto path = drawPath();
-		if (tmpSN < 0) {
-			removeStartNode();
-		}
-		else {
-			setStartNode(tmpSN);
-		}
-		if (tmpEN < 0) {
-			removeEndNode();
-		}
-		else {
-			setEndNode(tmpEN);
-		}
-		return path;
-	}
-	throw std::out_of_range("Index out of scope");
-}
-
-std::vector<int> Graph::DepthFirstSearch(int startNode, int endNode) {
-	if ((startNode >= 0) && (startNode < nodeArr.size()) && (endNode >= 0) && (endNode < nodeArr.size()) && (endNode != startNode)) {
-		int tmpSN = startNodeID;
-		int tmpEN = endNodeID;
-		setStartNode(startNode);
-		setEndNode(endNode);
-		DepthFirstSearch();
-		auto path = drawPath();
-		if (tmpSN < 0) {
-			removeStartNode();
-		}
-		else {
-			setStartNode(tmpSN);
-		}
-		if (tmpEN < 0) {
-			removeEndNode();
-		}
-		else {
-			setEndNode(tmpEN);
-		}
-		return path;
-	}
-	throw std::out_of_range("Index out of scope");
-}
-
-std::vector<int> Graph::Dijkstra(int startNode, int endNode) {
-	if ((startNode >= 0) && (startNode < nodeArr.size()) && (endNode >= 0) && (endNode < nodeArr.size()) && (endNode != startNode)) {
-		int tmpSN = startNodeID;
-		int tmpEN = endNodeID;
-		setStartNode(startNode);
-		setEndNode(endNode);
-		Dijkstra();
-		auto path = drawPath();
-		if (tmpSN < 0) {
-			removeStartNode();
-		}
-		else {
-			setStartNode(tmpSN);
-		}
-		if (tmpEN < 0) {
-			removeEndNode();
-		}
-		else {
-			setEndNode(tmpEN);
-		}
-		return path;
-	}
-	throw std::out_of_range("Index out of scope");
 }
 
 std::vector<int> Graph::BreadthFirstSearch(const std::string& _alias1, const std::string& _alias2) {
@@ -596,45 +471,32 @@ std::vector<int> Graph::Dijkstra(const std::string& _alias1, const std::string& 
 	throw std::invalid_argument("Couldn't find name");
 }
 
-bool Graph::Bipartite(const int _startNode) {
-	if ((_startNode >= 0) && (_startNode < nodeArr.size())) {
-		setStartNode(_startNode);
-		return Bipartite();
-	}
-	throw std::out_of_range("Index out of scope");
-}
-
 bool Graph::Bipartite(const std::string& _startNode) {
 	std::map<std::string, int>::iterator it = aliasResolve.find(_startNode);
 	if (it != aliasResolve.end()) {
-		setStartNode(it->second);
-		return Bipartite();
+		return Bipartite(it->second);
 	}
 	throw std::out_of_range("Couldn't find name");
 }
 
-std::vector<int> Graph::drawPath() {
+std::vector<int> Graph::drawPath(std::vector<int>& whoVisited, const int startNodeID, const int endNodeID) {
 	std::vector<int> path;
 	int currentNode = endNodeID;
-	if ((startNodeID == -1) || (endNodeID == -1)) {
-		throw std::logic_error("start or end node not set");
-	}
 
-	if (!nodeArr[currentNode].isVisited()) {
+	if (whoVisited[currentNode] == -1) {
 		throw std::logic_error("end node not visited/unreachable");
 	}
 
 	while (1) {
-		if (nodeArr[currentNode].isBeginNode()) {
+		if (startNodeID == currentNode) {
 			path.push_back(currentNode);
 			break;
 		}
 		path.push_back(currentNode);
-		currentNode = nodeArr[currentNode].getPrevious();
+		currentNode = whoVisited[currentNode];
 	}
-	int tmp;
 	for (std::size_t i = 0; i < path.size() - 1 - i; i++) {
-		tmp = path[i];
+		int tmp = path[i];
 		path[i] = path[path.size() - 1 - i];
 		path[path.size() - 1 - i] = tmp;
 	}
@@ -660,12 +522,6 @@ void Graph::printPath(std::vector<int> &&path) {
 	printPath(path);
 }
 
-void Graph::searchCleanup() {
-	for (std::size_t i = 0; i < nodeArr.size(); i++) {
-		nodeArr[i].clear();
-	}
-}
-
 void Graph::showNeighbours() {
 	for (std::size_t i = 0; i < nodeArr.size(); i++) {
 		std::cout << "ID " << i << ": ";
@@ -676,12 +532,7 @@ void Graph::showNeighbours() {
 
 void Graph::showNeighboursByName() {
 	for (std::size_t i = 0; i < nodeArr.size(); i++) {
-		if (nodeArr[i].beginNode == true) {
-			std::cout << "*" << nodeArr[i].name << " -> ";
-		}
-		else {
-			std::cout << " " << nodeArr[i].name << " -> ";
-		}
+		std::cout << nodeArr[i].name << " -> ";
 		for (std::size_t j = 0; j < nodeArr[i].countNeighbours(); j++) {
 			int retIndex = nodeArr[i].returnNeighbour(j);
 			if (nodeArr[retIndex].name != "") {
@@ -742,7 +593,6 @@ Graph Graph::operator+(Graph g2) {
 		pg1->nodeArr.push_back(pg2->nodeArr[i]);
 	}
 	for (std::size_t i = offset1; i < pg1->nodeArr.size(); i++) {
-		pg1->nodeArr[i].id += (offset1);
 		pg1->nodeArr[i].updateNeighbours(offset1);
 	}
 	bool first = true;
@@ -754,7 +604,7 @@ Graph Graph::operator+(Graph g2) {
 				return Graph(0);
 			}
 			first = true;
-			pg1->aliasResolve.emplace(pg1->nodeArr[i].name, pg1->nodeArr[i].id);
+			pg1->aliasResolve.emplace(pg1->nodeArr[i].name, i); //(i) second argument is 'id'
 		}
 	}
 	graphCount += 3;
@@ -764,15 +614,11 @@ Graph Graph::operator+(Graph g2) {
 DiGraph::DiGraph(const int id) : Graph(id) {}
 
 DiGraph::DiGraph(const Graph& g) {
-	startNodeID = g.startNodeID;
-	endNodeID = g.endNodeID;
 	nodeArr = g.nodeArr;
 	aliasResolve = g.aliasResolve;
 }
 
 DiGraph::DiGraph(const DiGraph& g) {
-	startNodeID = g.startNodeID;
-	endNodeID = g.endNodeID;
 	nodeArr = g.nodeArr;
 	aliasResolve = g.aliasResolve;
 }
@@ -811,23 +657,32 @@ bool DiGraph::removeEdge(const std::string& _alias1, const std::string& _alias2)
 }
 
 std::vector<std::vector<int>> DiGraph::FloydWarshall() {
-	std::vector<std::vector<int>> distMatrix(nodeArr.size(), std::vector<int>(nodeArr.size()));
+	//std::vector<std::vector<int>> distMatrix(nodeArr.size(), std::vector<int>(nodeArr.size()));
 	int maxWeight = std::numeric_limits<int>::max();
-	for (std::size_t i = 0; i < distMatrix.size(); ++i) {
-		for (std::size_t j = 0; j < distMatrix.size(); ++j) {
-			auto it = std::find(nodeArr[i].outEdge.begin(), nodeArr[i].outEdge.end(), nodeArr[j].id);
-			if (it != nodeArr[i].outEdge.end()) {
-				auto dist = std::distance(nodeArr[i].outEdge.begin(), it);
-				distMatrix[i][j] = nodeArr[i].outWeight[dist];
-			}
-			else if (i == j) {
-				distMatrix[i][j] = 0;
-			}
-			else {
+	//for (std::size_t i = 0; i < distMatrix.size(); ++i) {
+	//	for (std::size_t j = 0; j < distMatrix.size(); ++j) {
+	//		auto it = std::find(nodeArr[i].outEdge.begin(), nodeArr[i].outEdge.end(), j); //(j) is 'id'
+	//		if (it != nodeArr[i].outEdge.end()) {
+	//			auto dist = std::distance(nodeArr[i].outEdge.begin(), it);
+	//			distMatrix[i][j] = nodeArr[i].outWeight[dist];
+	//		}
+	//		else if (i == j) {
+	//			distMatrix[i][j] = 0;
+	//		}
+	//		else {
+	//			distMatrix[i][j] = maxWeight;
+	//		}
+	//	}
+	//}
+	auto distMatrix = weightMatrix();
+	for (std::size_t i = 0; i < distMatrix.size(); i++) {
+		for (std::size_t j = 0; j < distMatrix.size(); j++) {
+			if (distMatrix[i][j] == 0 && i != j) {
 				distMatrix[i][j] = maxWeight;
 			}
 		}
 	}
+
 	for (std::size_t k = 0; k < (nodeArr.size()); k++) {
 		for (std::size_t i = 0; i < (nodeArr.size()); i++) {
 			for (std::size_t j = 0; j < (nodeArr.size()); j++) {
@@ -860,6 +715,7 @@ std::vector<int> DiGraph::BellmanFord(const int source) {
 		throw std::out_of_range("Index out of scope");
 	}
 
+	constexpr int maxInt = std::numeric_limits<int>::max();
 	std::vector<int> dist(nodeArr.size());
 	for (std::size_t i = 0; i < nodeArr.size(); ++i) {
 		dist[i] = std::numeric_limits<int>::max();
@@ -872,7 +728,7 @@ std::vector<int> DiGraph::BellmanFord(const int source) {
 				int u = i;
 				int v = nodeArr[i].outEdge[j];
 				int weight = nodeArr[i].outWeight[j];
-				if (dist[u] != INT_MAX && dist[u] + weight < dist[v]) {
+				if (dist[u] != maxInt && dist[u] + weight < dist[v]) {
 					dist[v] = dist[u] + weight;
 				}
 			}
@@ -884,9 +740,8 @@ std::vector<int> DiGraph::BellmanFord(const int source) {
 			int u = i - 1;
 			int v = nodeArr[i - 1].outEdge[j];
 			int weight = nodeArr[i - 1].outWeight[j];
-			if (dist[u] != INT_MAX && dist[u] + weight < dist[v]) {
-				printf("Graph contains negative weight cycle");
-				return std::vector<int>();
+			if (dist[u] != maxInt && dist[u] + weight < dist[v]) {
+				return std::vector<int>(); //Graph contains negative weight cycle
 			}
 		}
 	}
@@ -912,6 +767,47 @@ void DiGraph::printBellmanFord(const std::vector<int>& dist) {
 			std::cout << i << " \t " << dist[i] << std::endl;
 		}
 	}
+}
+
+std::vector<int> DiGraph::TopologicalSort() {
+	std::stack<int> frontier;
+
+	bool* visited = new bool[nodeArr.size() + 1];
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		visited[i] = false;
+	}
+	for (std::size_t i = 0; i < nodeArr.size(); i++) {
+		if (visited[i] == false) {
+			TopologicalSortHelper(i, frontier, visited);
+		}
+	}
+
+	std::vector<int> order;
+	while (!frontier.empty()) {
+		order.push_back(frontier.top());
+		frontier.pop();
+	}
+	delete[] visited;
+	return order;
+}
+
+void DiGraph::TopologicalSortHelper(int v, std::stack<int>& frontier, bool *visited) {
+	visited[v] = true;
+
+	for (auto i : nodeArr[v].outEdge) {
+		if (visited[i] == false) {
+			TopologicalSortHelper(i, frontier, visited);
+		}
+	}
+
+	frontier.push(v);
+}
+
+void DiGraph::printTopologicalSort(const std::vector<int>& order) {
+	for (auto node : order) {
+		std::cout << node << " ";
+	}
+	std::cout << std::endl;
 }
 
 int DiGraph::graphType() const {

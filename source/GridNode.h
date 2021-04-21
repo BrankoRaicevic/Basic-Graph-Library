@@ -3,7 +3,6 @@
 
 class GridNode {
 	int previous;
-	bool visited;
 	bool blocked;
 	bool beginNode;
 	bool endNode;
@@ -21,11 +20,9 @@ public:
 	char getSign() const;
 	void setPrevious(const int recvID);
 	int getPrevious() const;
-	void setVisited();
 	bool isBeginNode() const;
 	bool isEndNode() const;
 	bool isFree() const;
-	bool isVisited() const;
 	void clear();
 	void findNeighbours(const int id, const int ver, const int hor);
 	void showNeighbours();

@@ -133,20 +133,6 @@ int main() {
 	DG6.setEdge("A", "D", 10);
 	DG6.printPath(DG6.Dijkstra("A", "D"));
 	DG6.printFloyd(DG6.FloydWarshall());
-	
-	Grid Grid1(5, 5);
-	Grid1.setStartNode(1, 2);
-	Grid1.setEndNode(5, 4);
-	Grid1.blockNode(2, 2);
-	Grid1.blockNode(2, 3);
-	Grid1.blockNode(2, 4);
-	Grid1.blockNode(2, 5);
-	Grid1.blockNode(3, 2);
-	Grid1.blockNode(4, 2);
-	Grid1.blockNode(4, 4);
-	Grid1.setEndNode(4, 5);
-	Grid1.DepthFirstSearch();
-	Grid1.drawGraph();
 
 	DiGraph DGFord(5);
 	DGFord.setName(0, "A");
@@ -163,5 +149,33 @@ int main() {
 	DGFord.setEdge("D", "C", 5);
 	DGFord.setEdge("E", "D", -3);
 	DGFord.printBellmanFord(DGFord.BellmanFord("A"));
+
+	
+	DiGraph DGSort(5);
+	DGSort.setName(0, "A");
+	DGSort.setName(1, "B");
+	DGSort.setName(2, "C");
+	DGSort.setName(3, "D");
+	DGSort.setName(4, "E");
+	DGSort.setEdge("A", "B");
+	DGSort.setEdge("A", "C");
+	DGSort.setEdge("B", "D");
+	DGSort.setEdge("C", "D");
+	DGSort.setEdge("D", "E");
+	DGSort.printTopologicalSort(DGSort.TopologicalSort());
+
+	//Grid Grid1(5, 5);
+	//Grid1.setStartNode(1, 2);
+	//Grid1.setEndNode(5, 4);
+	//Grid1.blockNode(2, 2);
+	//Grid1.blockNode(2, 3);
+	//Grid1.blockNode(2, 4);
+	//Grid1.blockNode(2, 5);
+	//Grid1.blockNode(3, 2);
+	//Grid1.blockNode(4, 2);
+	//Grid1.blockNode(4, 4);
+	//Grid1.setEndNode(4, 5);
+	//Grid1.DepthFirstSearch();
+	//Grid1.drawGraph();
 	return 0;
 }

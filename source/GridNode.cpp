@@ -2,8 +2,7 @@
 #include "GridNode.h"
 
 GridNode::GridNode() {
-	visited = false;
-	previous = 0;
+	previous = -1;
 	blocked = false;
 	beginNode = false;
 	endNode = false;
@@ -45,9 +44,6 @@ void GridNode::setPrevious(const int recvID) {
 int GridNode::getPrevious() const {
 	return previous;
 }
-void GridNode::setVisited() {
-	visited = true;
-}
 bool GridNode::isBeginNode() const {
 	return beginNode;
 }
@@ -57,12 +53,8 @@ bool GridNode::isEndNode() const {
 bool GridNode::isFree() const {
 	return blocked == true ? false : true;
 }
-bool GridNode::isVisited() const {
-	return visited;
-}
 void GridNode::clear() {
-	visited = false;
-	previous = 0;
+	previous = -1;
 }
 void GridNode::findNeighbours(const int id, const int ver, const int hor) {
 	//Left
